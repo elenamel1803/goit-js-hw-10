@@ -22,12 +22,14 @@ refs.errorEl.style.visibility = 'hidden';
 showLoader();
 
 refs.selectEl.addEventListener('change', evt => {
-  onSelect(evt.currentTarget.value);
+  onSelect(evt.target.value);
+  showCatInfo();
 });
 
 fetchBreeds()
   .then(data => {
     renderBreedsList(data);
+    showCatInfo(false);
   })
   .catch(onFetchError)
   .finally(() => showLoader(false));
@@ -43,18 +45,17 @@ function onSelect(breedId) {
   fetchCatByBreed(breedId)
     .then(data => {
       refs.catInfo.innerHTML = createInfoMarkup(data);
-      // showCatInfo();
     })
     .catch(onFetchError)
     .finally(() => showLoader(false));
 }
 
 function createListMarkup(data) {
-  const arrBreeds = data.map(({ name, id }) => {
-    return { text: name, value: id };
-  });
-
-  select.setData(arrBreeds);
+  select.setData(
+    data.map(({ name, id }) => {
+      return { text: name, value: id };
+    })
+  );
 }
 
 function createInfoMarkup(arr) {
