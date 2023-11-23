@@ -1,7 +1,7 @@
+import { fetchBreeds, fetchCatByBreed } from './cat-api';
 import Notiflix from 'notiflix';
 import SlimSelect from 'slim-select';
 import 'slim-select/dist/slimselect.css';
-import { fetchBreeds, fetchCatByBreed } from './cat-api';
 
 const refs = {
   selectEl: document.querySelector('.breed-select'),
@@ -17,66 +17,81 @@ const select = new SlimSelect({
   },
 });
 
-function isLoaderActive() {
-  if ((refs.loaderEl.style.visibility = 'visible')) {
-    refs.selectEl.style.visibility = 'hidden';
-    refs.catInfo.style.visibility = 'hidden';
-  }
-  refs.selectEl.style.visibility = 'visible';
-  refs.catInfo.style.visibility = 'visible';
-}
-
 refs.errorEl.style.visibility = 'hidden';
-refs.loaderEl.style.visibility = 'visible';
 
-renderBreedsList();
+showLoader();
 
-refs.selectEl.addEventListener('change', onSelect);
+refs.selectEl.addEventListener('change', evt => {
+  onSelect(evt.currentTarget.value);
+});
 
-function renderBreedsList() {
-  isLoaderActive();
-  fetchBreeds()
-    .then(data => {
-      const arrBreeds = data.map(({ name, id }) => {
-        return { text: name, value: id };
-      });
+fetchBreeds()
+  .then(data => {
+    renderBreedsList(data);
+  })
+  .catch(onFetchError)
+  .finally(() => showLoader(false));
 
-      select.setData([...arrBreeds]);
-    })
-    .catch(onFetchError);
+function renderBreedsList(data) {
+  refs.selectEl.innerHTML = createListMarkup(data);
 }
 
-function onSelect(evt) {
+function onSelect(breedId) {
+  showLoader();
   refs.catInfo.innerHTML = '';
-  isLoaderActive();
 
-  fetchCatByBreed(evt.currentTarget.value)
+  fetchCatByBreed(breedId)
     .then(data => {
-      console.log(data);
-      const {
+      refs.catInfo.innerHTML = createInfoMarkup(data);
+      // showCatInfo();
+    })
+    .catch(onFetchError)
+    .finally(() => showLoader(false));
+}
+
+function createListMarkup(data) {
+  const arrBreeds = data.map(({ name, id }) => {
+    return { text: name, value: id };
+  });
+
+  select.setData(arrBreeds);
+}
+
+function createInfoMarkup(arr) {
+  return arr
+    .map(
+      ({
         url,
         breeds: {
           [0]: { name, description, temperament },
         },
-      } = data[0];
-
-      refs.catInfo.innerHTML = `<div class="box-img">
+      }) => `<div class="box-img">
         <img src="${url}" alt="${name}" width="400"/>
         </div>
         <div class="box-info">
         <h2>${name}</h2>
         <p>${description}</p>
         <p>
-        <b>Temperament:</b> ${temperament}</p></div>`;
+        <b>Temperament:</b> ${temperament}</p></div>`
+    )
+    .join('');
+}
 
-      refs.loaderEl.style.visibility = 'hidden';
-    })
-    .catch(onFetchError);
+function showLoader(isShow = true) {
+  refs.loaderEl.style.visibility = isShow ? 'visible' : 'hidden';
+}
+
+function showSelect(isShow = true) {
+  refs.selectEl.style.visibility = isShow ? 'visible' : 'hidden';
+}
+
+function showCatInfo(isShow = true) {
+  refs.catInfo.style.visibility = isShow ? 'visible' : 'hidden';
 }
 
 function onFetchError(error) {
-  refs.selectEl.style.visibility = 'hidden';
-  refs.loaderEl.style.visibility = 'hidden';
+  showSelect(false);
+  showLoader(false);
   console.log(error);
 
   Notiflix.Notify.failure(refs.errorEl.textContent, {
